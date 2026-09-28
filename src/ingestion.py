@@ -204,6 +204,47 @@ def generate_sample_dataset(output_path: str, n_rows: int = 10000) -> None:
     pd.DataFrame(rows).to_csv(output_file, index=False)
     logger.info("Synthetic dataset created: %s (%d rows)" % (output_file, n_rows))
 
+def ingest_parquet_to_bronze_memory(
+    spark: SparkSession,
+    file_path: str,
+):
+    """
+    In-memory version of Bronze ingestion for Parquet files (DistriNet version).
+    
+    Reads a Parquet file, cleans column names, adds ingestion metadata,
+    but DOES NOT persist (returns the DataFrame).
+    
+    Usage:
+        df = ingest_parquet_to_bronze_memory(spark, "/Volumes/.../file.parquet")
+    """
+    from pathlib import Path
+    
+    file_path_obj = Path(file_path)
+    logger.info("Ingesting Parquet file: %s" % file_path_obj.name)
+    
+    # Read Parquet (already typed, no need for inferSchema)
+    df = spark.read.parquet(file_path)
+    
+    # Clean column names (same logic as CSV)
+    for old_name in df.columns:
+        new_name = clean_column_name(old_name)
+        if old_name != new_name:
+            df = df.withColumnRenamed(old_name, new_name)
+    
+    # Add ingestion metadata
+    df = (
+        df
+        .withColumn("_source_file", F.lit(file_path_obj.name))
+        .withColumn("_ingestion_ts", F.current_timestamp())
+    )
+    
+    # Stats
+    row_count = df.count()
+    col_count = len(df.columns)
+    logger.info("  -> %d rows, %d columns" % (row_count, col_count))
+    logger.info("Bronze ingestion completed (in memory, from Parquet)")
+    
+    return df
 
 # === For local CLI usage ===
 if __name__ == "__main__":

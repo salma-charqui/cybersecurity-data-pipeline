@@ -215,16 +215,30 @@ def cast_types(df: DataFrame) -> DataFrame:
 # Step 6 - Drop constant columns
 # =============================================================================
 
-def drop_constant_columns(df: DataFrame) -> DataFrame:
+def drop_constant_columns(df: DataFrame, protected_columns: Optional[List[str]] = None) -> DataFrame:
     """
     Drop columns that have only one unique value across all rows.
     These columns carry no information for ML.
+    
+    Protected columns (e.g., 'label') are never dropped even if they
+    have a single value, because they are needed for ML training.
+    
+    Args:
+        df: input DataFrame
+        protected_columns: columns to preserve even if constant (default: ['label'])
     """
+    if protected_columns is None:
+        protected_columns = ['label']
+    
     constant_cols = []
     
     for col_name in df.columns:
         # Skip metadata columns
         if col_name.startswith("_"):
+            continue
+        
+        # Skip protected columns
+        if col_name in protected_columns:
             continue
         
         distinct_count = df.select(col_name).distinct().count()
@@ -235,6 +249,7 @@ def drop_constant_columns(df: DataFrame) -> DataFrame:
         df_clean = df.drop(*constant_cols)
         logger.info(f"Step 6 - drop_constant_columns: dropped {len(constant_cols)} "
                     f"constant columns: {constant_cols}")
+        logger.info(f"  Protected columns preserved: {protected_columns}")
     else:
         df_clean = df
         logger.info(f"Step 6 - drop_constant_columns: no constant columns found")
