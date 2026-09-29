@@ -217,18 +217,22 @@ def add_protocol_name(df: DataFrame) -> DataFrame:
 def add_binary_target(df: DataFrame, label_col: str = "label") -> DataFrame:
     """
     Add a binary target column `is_attack` based on the label:
-    - 0 if label == "Benign"
+    - 0 if label is "Benign" (case-insensitive: BENIGN, Benign, benign)
     - 1 otherwise (any attack type)
     
     This is the target variable for binary classification in ML.
+    
+    Case-insensitive matching is used because CIC-IDS2017 variations
+    exist across dataset versions ("BENIGN", "Benign", "benign").
     """
     if label_col not in df.columns:
         logger.warning(f"Step 5 - add_binary_target: column '{label_col}' not found, skipping")
         return df
     
+    # Case-insensitive comparison: lowercase the label and compare to "benign"
     df_gold = df.withColumn(
         "is_attack",
-        F.when(F.col(label_col) == "Benign", 0).otherwise(1)
+        F.when(F.lower(F.col(label_col)) == "benign", 0).otherwise(1)
     )
     
     # Stats
