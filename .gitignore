@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# MLflow experiment folder
+cic-ids2017-intrusion-detection/
+mlruns/
+
+# MLflow experiment (multiple patterns)
+cic-ids2017-intrusion-detection
+cic-ids2017-intrusion-detection/
+**/cic-ids2017-intrusion-detection*
+mlruns/
